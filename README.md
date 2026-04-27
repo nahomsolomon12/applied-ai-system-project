@@ -80,3 +80,13 @@ PowerShell example:
 
 ## Reflection
 
+Initially, it was difficult to come up with an update to make for such a run-of-the-mill game. 
+
+But I arrived at a practical solution to have a better set of hints utilizing RAG to give targetted hints. 
+
+Initially, Copilot thought it best to use a deterministic set of hints for potential inputs
+
+After some deliberation, I chose a dynamic approach instead and implemented an LLM powered RAG system that gives dynamic hints to arrive at the answer before the number of tries run out.
+
+## Loom Video Here: 
+[Loom](https://www.loom.com)
