@@ -89,4 +89,4 @@ Initially, Copilot thought it best to use a deterministic set of hints for poten
 After some deliberation, I chose a dynamic approach instead and implemented an LLM powered RAG system that gives dynamic hints to arrive at the answer before the number of tries run out.
 
 ## Loom Video Here: 
-[Loom](https://www.loom.com)
+[Loom](https://www.loom.com/share/093d5e8ccf494979861762dc652966b2)
