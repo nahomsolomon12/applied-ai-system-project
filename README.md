@@ -1,101 +1,82 @@
-# Number Guessing Game with RAG Hints
+# Number Guessing Game
 
-## Overview
+This project is a Streamlit number guessing game built to help players reach the secret number in the fewest possible tries. Its core goal is to combine stable game logic (difficulty ranges, attempts, scoring, and history) with smarter hints than a simple higher or lower message. The current system uses a hybrid RAG design: it retrieves strategy guidance from premade markdown files and can optionally use an LLM to generate a one-line dynamic hint grounded in that retrieved context.
 
-This project is a Streamlit-based number guessing game designed to help players find a secret number in as few guesses as possible.
+## Architecture Overview
 
-The twist is the hint system: instead of only returning a basic "higher" or "lower" response, the game uses a retrieval-augmented generation flow backed by premade markdown documentation on statistical reasoning, probability, and search strategy. The goal is to generate a single concise hint that helps the player make the next best guess and converge on the answer with minimal tries.
+The architecture is shown in the assets folder with a class-style diagram and a sequence diagram. The class diagram (`assets/classDiagrams.png`) shows the responsibilities split across Streamlit UI orchestration (`app.py`), game rules (`logic_utils.py`), state tracking (`st.session_state`), and the hint engine (`rag_hints.py`) with a markdown corpus under `docs/probability/`. The sequence diagram (`assets/sequenceDiagrams.png`) illustrates the runtime path: player input is parsed and scored first, then the hint engine retrieves the most relevant strategy docs, optionally calls an LLM for a single-line hint, applies guardrails, and returns a safe output to the UI.
 
-## How It Works
+## Setup Instructions
 
-1. The game selects a secret number inside a defined range.
-2. The player submits guesses through the Streamlit interface.
-3. The app keeps the game state stable across interactions.
-4. A RAG layer reads curated markdown files containing probability concepts and optimal guessing strategies.
-5. The retrieved context is used to produce one short, useful hint that nudges the player toward the most efficient next guess.
+1. Open a terminal in the project root.
+2. Install dependencies:
+    `pip install -r requirements.txt`
+3. Run tests (recommended before launching):
+    `python -m pytest`
+4. Start the app:
+    `python -m streamlit run app.py`
+5. In the browser UI, select difficulty, enter guesses, and enable `Show hint` to see strategic hints.
 
-## RAG Hint Design
+### Optional: Enable Dynamic LLM Hints
 
-The hint engine is intended to use prewritten markdown files such as:
+By default, the game uses deterministic retrieval-only hints. To enable hybrid retrieval + LLM generation:
 
-- Statistical elimination strategies
-- Midpoint and range narrowing methods
-- Probability-based decision making
-- Expected-value thinking for fewer guesses
-- Adaptive advice for early, middle, and late game states
+1. Set environment variables:
+    `RAG_HINT_LLM_ENABLED=true`
+    `OPENAI_API_KEY=<your_api_key>`
+2. Optional overrides:
+    `RAG_HINT_LLM_MODEL=gpt-4o-mini`
+    `RAG_HINT_LLM_BASE_URL=https://api.openai.com/v1`
+3. Run the app again with Streamlit.
 
-Each response should stay focused and actionable. The output should be a single line hint that explains what strategy to use next without revealing the answer directly.
-
-The current implementation is hybrid:
-
-- Retrieval: the app reads premade markdown files from `docs/probability/` and ranks them against the current game state.
-- Generation: if enabled, an LLM uses only the retrieved context plus game state to produce a one-line dynamic hint.
-- Guardrails: hints are sanitized to one line, restricted from revealing answers, and forced to remain directionally consistent with the latest high/low outcome.
-- Fallback: if LLM configuration is missing or the model call fails, the app automatically returns a deterministic strategy hint.
-
-Example hint styles:
-
-- "Use the midpoint of your current range to cut the search space in half."
-- "Your best move is to test the upper half of the remaining interval next."
-- "A binary-search approach now gives you the fastest path to the target."
-
-## Setup
-
-1. Install dependencies:
-   `pip install -r requirements.txt`
-2. Run the app:
-   `python -m streamlit run app.py`
-
-## Optional Dynamic Hint Mode (Hybrid RAG + LLM)
-
-By default, hints run in deterministic retrieval mode. To enable dynamic LLM hints, set:
-
-- `RAG_HINT_LLM_ENABLED=true`
-- `OPENAI_API_KEY=<your_api_key>`
-
-Optional overrides:
-
-- `RAG_HINT_LLM_MODEL` (default: `gpt-4o-mini`)
-- `RAG_HINT_LLM_BASE_URL` (default: `https://api.openai.com/v1`)
-
-Example (PowerShell):
+PowerShell example:
 
 `$env:RAG_HINT_LLM_ENABLED="true"`
 `$env:OPENAI_API_KEY="your_key_here"`
 `python -m streamlit run app.py`
 
-## Hint Corpus
+## Sample Interactions
 
-The RAG hints are built from markdown files in `docs/probability/`.
+### Example 1: Deterministic RAG hint after a high guess
 
-- `basics.md`
-- `binary-search.md`
-- `expected-value.md`
-- `range-narrowing.md`
-- `difficulty-tuning.md`
+- Input state:
+   Difficulty: Normal, Range: 1-100, Guess: 70, Outcome: Too High
+- AI output hint:
+   `Use the lower half of the remaining range next to cut the search space fastest.`
 
-These documents should stay focused on statistical reasoning and search strategy so the hint stays short, safe, and useful.
+### Example 2: Deterministic RAG hint after a low guess
 
-## Project Goal
+- Input state:
+   Difficulty: Normal, Range: 1-100, Guess: 30, Outcome: Too Low
+- AI output hint:
+   `Use the upper half of the remaining range next to cut the search space fastest.`
 
-The main objective is to make the game feel smarter than a standard number guessing app by combining gameplay with retrieval-backed guidance. The markdown corpus provides the reasoning, and the app turns that reasoning into a short hint that helps the player reach the secret number in the fewest possible guesses.
+### Example 3: Hybrid mode dynamic hint (LLM enabled)
 
-## Suggested Content Structure for Markdown Docs
+- Input state:
+   Difficulty: Hard, Attempts remaining: 2, Outcome: Too High
+- AI output hint (sample):
+   `Favor the lower half and choose its midpoint to maximize information from this turn.`
 
-If you expand the hint corpus, keep the files organized around strategy topics rather than raw answers.
+## Design Decisions
 
-- `docs/probability/basics.md`
-- `docs/probability/binary-search.md`
-- `docs/probability/expected-value.md`
-- `docs/probability/range-narrowing.md`
-- `docs/probability/difficulty-tuning.md`
+- Why this design:
+   The game keeps game rules deterministic and testable in `logic_utils.py`, while treating hinting as a separate retrieval/generation concern in `rag_hints.py`. This separation improves reliability and makes it easier to test core gameplay independently of AI behavior.
+- Retrieval-first grounding:
+   The hint pipeline always retrieves strategy text from curated markdown docs first, so generated hints stay anchored to your intended probability concepts.
+- Guardrails and fallbacks:
+   Dynamic outputs are constrained to one line, filtered for unsafe answer-reveal phrases, and checked for directional consistency with the latest outcome. If LLM config is missing or an API call fails, the system falls back to deterministic hints.
+- Trade-offs:
+   Deterministic hints are more predictable but less expressive; LLM hints are more flexible and natural but require stronger safety controls, network access, and key management.
 
-## Notes
+## Testing Summary
 
-- The hint system should never expose the secret number directly.
-- The hint should always reflect the current game state.
-- The best hint is short, specific, and mathematically useful.
+- What worked:
+   The game logic tests and RAG hint tests pass, including retrieval behavior, fallback behavior, and hybrid dynamic-hint guardrail behavior.
+- What did not work initially:
+   One hint-ranking path returned a generic strategy instead of explicitly reflecting high/low direction. This was fixed by enforcing directional consistency in hint formatting and guardrails.
+- What we learned:
+   Retrieval grounding plus strict post-processing is essential when adding LLM generation to gameplay advice. It preserves relevance and prevents unsafe or misleading hints while keeping the user experience responsive.
 
-## Demo
+## Reflection
 
-Add a screenshot of the working game and example hint output here once the RAG flow is implemented.
