@@ -10,6 +10,7 @@ from logic_utils import (
     reset_game_state,
     update_score,
 )
+from rag_hints import build_hint_state, generate_strategic_hint, load_hint_corpus
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -35,6 +36,14 @@ low, high = get_range_for_difficulty(difficulty)
 
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
+
+
+@st.cache_resource(show_spinner=False)
+def get_hint_corpus():
+    return load_hint_corpus()
+
+
+hint_corpus = get_hint_corpus()
 
 if "secret" not in st.session_state:
     st.session_state.secret = random.randint(low, high)
@@ -117,6 +126,19 @@ if submit:
 
         if show_hint and hint_message:
             st.warning(hint_message)
+
+        if show_hint and outcome != "Win":
+            hint_state = build_hint_state(
+                difficulty=difficulty,
+                low=low,
+                high=high,
+                attempt_limit=attempt_limit,
+                attempts_used=st.session_state.attempts,
+                outcome=outcome,
+                history=st.session_state.history,
+            )
+            strategic_hint = generate_strategic_hint(hint_state, hint_corpus)
+            st.info(strategic_hint)
 
         st.session_state.score = update_score(
             current_score=st.session_state.score,
