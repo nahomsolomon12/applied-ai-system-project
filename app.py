@@ -12,10 +12,10 @@ from logic_utils import (
 )
 from rag_hints import build_hint_state, generate_strategic_hint, load_hint_corpus
 
-st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
+st.set_page_config(page_title="Number Guesser", page_icon="🎮")
 
-st.title("🎮 Game Glitch Investigator")
-st.caption("An AI-generated guessing game. Something is off.")
+st.title("🎮 Number Guessing Game")
+st.caption("An AI-generated guessing game.")
 
 st.sidebar.header("Settings")
 
